@@ -14,6 +14,7 @@
 </ul>
 
 <button class="btn btn-primary" @onclick=HandleNotifyToken>取得 LINE Notify access token</button>
+<button class="btn btn-secondary">檢查 AccessToken 狀態(未實作)</button>
 
 @if (f_loading)
 {
@@ -79,7 +80,7 @@
 
       // 需事先存好
       const string ClientID = @"wpO642hWhtyWEi6OSIOwJY";
-      const string ClientCecret = @"eX6DoCyvESUmFFKJvIPrS0oDAvvqXIRnBEyXgka6zeO";
+      const string ClientSecret = @"eX6DoCyvESUmFFKJvIPrS0oDAvvqXIRnBEyXgka6zeO";
       const string RedirectUri = @"https://d237-211-72-195-28.ngrok-free.app";
 
       using var _http = httpFactory.CreateClient();
@@ -93,7 +94,7 @@
       List<string> queryItems = new List<string>();
       queryItems.Add($"grant_type=authorization_code");
       queryItems.Add($"client_id={ClientID}");
-      queryItems.Add($"client_secret={ClientCecret}");
+      queryItems.Add($"client_secret={ClientSecret}");
       queryItems.Add($"redirect_uri={RedirectUri}");
       queryItems.Add($"code={QueryCode}");
       tokenUri.Query = String.Join("&", queryItems);

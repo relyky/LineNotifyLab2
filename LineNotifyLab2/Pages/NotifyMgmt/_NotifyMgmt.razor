@@ -7,6 +7,13 @@
 <h1>LINE Notify 管理</h1>
 
 
+
+
+
+<button class="btn btn-secondary" @onclick=HandleSimsAuthN>設定聊天室參數</button>
+
+<button class="btn btn-primary" @onclick=HandleNotifyAuthN>LINE Notify 授權</button>
+
 <button class="btn btn-secondary" @onclick=HandleSimsAuthN>模擬認證成功</button>
 
 @code {
@@ -16,6 +23,15 @@
       WriteIndented = true,
       Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
+
+
+
+  void HandleNotifyAuthN()
+  {
+    // GET
+    navSvc.NavigateTo("/notifyback?code=1234567890123456789012&state=12345678-1234-1234-1234-123456789012");
+  }
+
 
   void HandleSimsAuthN()
   {
