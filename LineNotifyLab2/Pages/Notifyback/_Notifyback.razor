@@ -2,6 +2,7 @@
 @page "/notifyback"
 @inject IHttpClientFactory httpFactory
 @inject NavigationManager navSvc
+@inject ProtectedLocalStorage localStore
 
 <PageTitle>LINE Notify callback</PageTitle>
 
@@ -10,11 +11,15 @@
 <h6>Query Parameters</h6>
 <ul>
   <li>code: @QueryCode</li>
-  <li>state: @QueryState</li>
+  <li>state: @QueryState \ @(System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(QueryState))) </li>
 </ul>
 
-<button class="btn btn-primary" @onclick=HandleNotifyToken>取得 LINE Notify access token</button>
-<button class="btn btn-secondary">檢查 AccessToken 狀態(未實作)</button>
+<h6>Line Notify Setting</h6>
+<pre>
+  @JsonSerializer.Serialize(notifySetting, jsonOptions)
+</pre>
+
+@* <button class="btn btn-primary" @onclick=HandleNotifyToken>取得 LINE Notify access token</button> *@
 
 @if (f_loading)
 {
@@ -32,7 +37,7 @@
 
 @if(tokenResult != null)
 {
-  <div class="alert alert-info my-3" role="alert">
+  <div class=@($"alert {(tokenResult.status == 200 ? "alert-success" : "alert-danger")} my-3") role="alert">
     @JsonSerializer.Serialize(tokenResult, jsonOptions)
   </div>
 }
@@ -57,10 +62,19 @@
   string? errMsg = null;
   bool f_loading = false;
   LineNotifyTokenResponse? tokenResult = null;
+  LineNotifyData? notifySetting = null;
 
-  protected override void OnInitialized()
+  protected override async Task OnAfterRenderAsync(bool firstRender)
   {
+    if (firstRender)
+    {
+      var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
+      notifySetting = result.Success ? result.Value! : new LineNotifyData();
+      StateHasChanged();
 
+      await HandleNotifyToken();
+      StateHasChanged();
+    }
   }
 
   async Task HandleNotifyToken()
@@ -78,13 +92,8 @@
       f_loading = true;
       tokenResult = null;
 
-      // 需事先存好
-      const string ClientID = @"wpO642hWhtyWEi6OSIOwJY";
-      const string ClientSecret = @"eX6DoCyvESUmFFKJvIPrS0oDAvvqXIRnBEyXgka6zeO";
-      const string RedirectUri = @"https://d237-211-72-195-28.ngrok-free.app";
-
       using var _http = httpFactory.CreateClient();
-      _http.BaseAddress = new Uri($"https://notify-api.line.me");
+      _http.BaseAddress = new Uri($"https://notify-bot.line.me");
 
       //# 組織 notify uri.
       var tokenUri = new UriBuilder(_http.BaseAddress);
@@ -93,15 +102,22 @@
       // uri-query
       List<string> queryItems = new List<string>();
       queryItems.Add($"grant_type=authorization_code");
-      queryItems.Add($"client_id={ClientID}");
-      queryItems.Add($"client_secret={ClientSecret}");
-      queryItems.Add($"redirect_uri={RedirectUri}");
+      queryItems.Add($"client_id={notifySetting?.ClientID}");
+      queryItems.Add($"client_secret={notifySetting?.ClientSecret}");
+      queryItems.Add($"redirect_uri={notifySetting?.RedirectUri}");
       queryItems.Add($"code={QueryCode}");
       tokenUri.Query = String.Join("&", queryItems);
 
       using var resp = await _http.PostAsync(tokenUri.Uri, new StringContent(string.Empty));
       var json = await resp.Content.ReadAsStringAsync();
       tokenResult = JsonSerializer.Deserialize<LineNotifyTokenResponse>(json);
+
+      if(tokenResult!.status == 200)
+      {
+        // 儲存 AccessToken
+        notifySetting!.AccessToken = tokenResult.access_token;
+        await localStore.SetAsync(nameof(LineNotifyData), notifySetting);
+      }
     }
     catch (Exception ex)
     {

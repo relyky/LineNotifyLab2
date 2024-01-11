@@ -1,11 +1,15 @@
 ﻿@page "/notify-poster"
 @inject IHttpClientFactory httpFactory
 @inject NavigationManager navSvc
+@inject ProtectedLocalStorage localStore
 
 <PageTitle>LINE Notify 訊息發送</PageTitle>
 
 <h1>LINE Notify 訊息發送</h1>
-<h2>選取發送對象...未實作</h2>
+<h6>發送對象 Line Notify Setting</h6>
+<pre>
+  @JsonSerializer.Serialize(notifySetting, jsonOptions)
+</pre>
 
 <EditForm Model=formData OnValidSubmit=HandleSubmit>
   <DataAnnotationsValidator />
@@ -55,26 +59,32 @@
     };
 
   //## State
+  LineNotifyData? notifySetting = null;
   PostModel formData = new();
   string? errMsg = null;
   bool f_loading = false;
 
+  protected override async Task OnAfterRenderAsync(bool firstRender)
+  {
+    if (firstRender)
+    {
+      var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
+      notifySetting = result.Success ? result.Value! : new LineNotifyData();
+      StateHasChanged();
+    }
+  }
+
   async Task HandleSubmit(EditContext ctx)
   {
+    // POST https://notify-api.line.me/api/notify?message=我出運了圖圖&stickerPackageId=1&stickerId=2
+
     try
     {
       errMsg = null;
       f_loading = true;
 
-      // POST https://notify-api.line.me/api/notify?message=我出運了圖圖&stickerPackageId=1&stickerId=2
-      // 發行存取權杖（開發人員用）
-      // MyLineNotifyStaff (自己)
-      //const string AccessToken = @"ZXivR2Mnmb4s4qpRzfMlPekTPNwR7QOX3yJNUo9jtCH";
-      // 測試 LINE Notify (群組)
-      const string AccessToken = @"41v5bzGSkVGecLxCvJBrdJ224quIQMTBydBCumz5CsE";
-
       using var _http = httpFactory.CreateClient();
-      _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {AccessToken}");
+      _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {notifySetting!.AccessToken}");
       _http.BaseAddress = new Uri($"https://notify-api.line.me");
 
       //# 組織 notify uri.

@@ -1,20 +1,56 @@
 ﻿@page "/notify-mgmt"
 @inject IHttpClientFactory httpFactory
 @inject NavigationManager navSvc
+@inject ProtectedLocalStorage localStore
 
 <PageTitle>LINE Notify 管理</PageTitle>
 
 <h1>LINE Notify 管理</h1>
 
+<EditForm Model=formData OnValidSubmit=HandleSubmit>
+  <DataAnnotationsValidator />
+  <ValidationSummary />
 
+  <div class="mb-2">
+    <label class="form-label">IdName</label>
+    <InputText @bind-Value=formData.IdName class="form-control" />
+  </div>
 
+  <div class="mb-2">
+    <label class="form-label">ClientID</label>
+    <InputText @bind-Value=formData.ClientID class="form-control" />
+  </div>
 
+  <div class="mb-2">
+    <label class="form-label">ClientSecret</label>
+    <InputText @bind-Value=formData.ClientSecret class="form-control" />
+  </div>
 
-<button class="btn btn-secondary" @onclick=HandleSimsAuthN>設定聊天室參數</button>
+  <div class="mb-2">
+    <label class="form-label">RedirectUri</label>
+    <InputText @bind-Value=formData.RedirectUri class="form-control" />
+  </div>
 
-<button class="btn btn-primary" @onclick=HandleNotifyAuthN>LINE Notify 授權</button>
+  <div class="mb-2">
+    <label class="form-label">AccessToken</label>
+    <p class="form-control-static">@formData.AccessToken &nbsp;</p>
+  </div>
 
-<button class="btn btn-secondary" @onclick=HandleSimsAuthN>模擬認證成功</button>
+  <button class="btn btn-primary" type="submit">儲存聊天室設定</button>
+</EditForm>
+
+<br />
+
+<button class="btn btn-primary" @onclick=HandleNotifyAuth>LINE Notify 授權</button>
+
+<button class="btn btn-secondary" @onclick=HandleSimsAuth>模擬認證成功</button>
+
+@if (f_loading)
+{
+  <div class="progress my-3">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+  </div>
+}
 
 @code {
   //## Resource
@@ -24,17 +60,68 @@
       Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
+  //## State
+  LineNotifyData formData = new LineNotifyData();
+  string? errMsg = null;
+  bool f_loading = false;
 
-
-  void HandleNotifyAuthN()
+  protected override async Task OnAfterRenderAsync(bool firstRender)
   {
-    // GET
-    navSvc.NavigateTo("/notifyback?code=1234567890123456789012&state=12345678-1234-1234-1234-123456789012");
+    if (firstRender)
+    {
+      var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
+      formData = result.Success ? result.Value! : new LineNotifyData();
+      StateHasChanged();
+    }
   }
 
-
-  void HandleSimsAuthN()
+  async Task HandleSubmit(EditContext ctx)
   {
-    navSvc.NavigateTo("/notifyback?code=1234567890123456789012&state=12345678-1234-1234-1234-123456789012");
+    await localStore.SetAsync(nameof(LineNotifyData), formData);
+  }
+
+  void HandleNotifyAuth()
+  {
+    // §§ GET /oauth/authorize:form_post取到 code,state　
+    //GET https://notify-bot.line.me/oauth/authorize
+    // &state=12345678-1234-1234-1234-123456789012
+
+    try
+    {
+      errMsg = null;
+      f_loading = true;
+
+      using var _http = httpFactory.CreateClient();
+      _http.BaseAddress = new Uri($"https://notify-bot.line.me");
+
+      //# 組織 notify uri.
+      var authUri = new UriBuilder(_http.BaseAddress);
+      authUri.Path = "oauth/authorize";
+
+      // uri-query
+      List<string> queryItems = new List<string>();
+      queryItems.Add($"response_type=code");
+      queryItems.Add($"scope=notify");
+      queryItems.Add($"client_id={formData.ClientID}");
+      queryItems.Add($"redirect_uri={formData.RedirectUri}");
+      queryItems.Add($"state={Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(formData.IdName))}");
+      authUri.Query = String.Join("&", queryItems);
+
+      navSvc.NavigateTo(authUri.ToString(), false);
+    }
+    catch (Exception ex)
+    {
+      errMsg = "發送 LINE Notify 出現例外！" + ex.Message;
+    }
+    finally
+    {
+      f_loading = false;
+    }
+  }
+
+  void HandleSimsAuth()
+  {
+    // 模擬認證成功
+    navSvc.NavigateTo("/notifyback?code=1234567890123456789012&state=5ris6KmmIE5vdGlmeSDnvqTntYQ=");
   }
 }

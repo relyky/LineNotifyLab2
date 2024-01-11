@@ -1,5 +1,8 @@
 ﻿namespace LineNotifyLab2.Model;
 
+/// <summary>
+/// LINE 聊天室通知設定
+/// </summary>
 public record LineNotifyData
 {
   /// <summary>
