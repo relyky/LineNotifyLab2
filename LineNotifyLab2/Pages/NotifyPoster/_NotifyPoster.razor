@@ -1,9 +1,108 @@
 ﻿@page "/notify-poster"
+@inject IHttpClientFactory httpFactory
+@inject NavigationManager navSvc
 
 <PageTitle>LINE Notify 訊息發送</PageTitle>
 
 <h1>LINE Notify 訊息發送</h1>
+<h2>選取發送對象...未實作</h2>
+
+<EditForm Model=formData OnValidSubmit=HandleSubmit>
+  <DataAnnotationsValidator />
+  <ValidationSummary />
+
+  <div class="mb-2">
+    <label class="form-label">Message</label>
+    <InputTextArea @bind-Value=formData.Message class="form-control" rows="3" />
+  </div>
+
+  <div class="mb-2">
+    <label class="form-label">Sticker Package ID</label>
+    <InputNumber @bind-Value=formData.StickerPackageId class="form-control" />
+  </div>
+
+  <div class="mb-2">
+    <label class="form-label">Sticker ID</label>
+    <InputNumber @bind-Value=formData.StickerId class="form-control" />
+  </div>
+
+  <button class="btn btn-primary" type="submit">送出</button>
+</EditForm>
+
+@if(errMsg != null)
+{
+  <div class="alert alert-danger my-3" role="alert">
+    @errMsg
+  </div>
+}
 
 @code {
+  //## Resource
+  System.Text.Json.JsonSerializerOptions jsonOptions = new System.Text.Json.JsonSerializerOptions
+    {
+      WriteIndented = true,
+      Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 
+  //## State
+  PostModel formData = new();
+  string? errMsg = null;
+  bool f_loading = false;
+
+  async Task HandleSubmit(EditContext ctx)
+  {
+    try
+    {
+      errMsg = null;
+      f_loading = true;
+
+      // POST https://notify-api.line.me/api/notify?message=我出運了圖圖&stickerPackageId=1&stickerId=2
+      // 發行存取權杖（開發人員用）
+      // MyLineNotifyStaff (自己)
+      //const string AccessToken = @"ZXivR2Mnmb4s4qpRzfMlPekTPNwR7QOX3yJNUo9jtCH";
+      // 測試 LINE Notify (群組)
+      const string AccessToken = @"41v5bzGSkVGecLxCvJBrdJ224quIQMTBydBCumz5CsE";
+
+      using var _http = httpFactory.CreateClient();
+      _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {AccessToken}");
+      _http.BaseAddress = new Uri($"https://notify-api.line.me");
+
+      //# 組織 notify uri.
+      var notifyUri = new UriBuilder(_http.BaseAddress);
+      notifyUri.Path = "api/notify";
+
+      // uri-query
+      List<string> queryItems = new List<string>();
+      queryItems.Add($"message={formData.Message}");
+
+      if (formData.StickerPackageId > 0) 
+        queryItems.Add($"stickerPackageId={formData.StickerPackageId}");
+
+      if(formData.StickerId > 0)
+        queryItems.Add($"stickerId={formData.StickerId}");
+
+      notifyUri.Query = String.Join("&", queryItems);
+
+      using var resp = await _http.PostAsync(notifyUri.Uri, new StringContent(string.Empty));
+      
+      var json = await resp.Content.ReadAsStringAsync();
+      var result = JsonSerializer.Deserialize<LineNotifyResponse>(json);
+
+      if(result!.status != 200)
+        errMsg = $"發送 LINE Notify 失敗！{JsonSerializer.Serialize(result, jsonOptions)}";
+    }
+    catch (Exception ex)
+    {
+      errMsg = "發送 LINE Notify 出現例外！" + ex.Message;
+    }
+  }
+
+  public class PostModel
+  {
+    public string Message { get; set; } = "今天天氣真好。";
+    public int StickerPackageId { get; set; } = 1;
+    public int StickerId { get; set; } = 1;
+  }
+
+  public record LineNotifyResponse(int status, string message);
 }

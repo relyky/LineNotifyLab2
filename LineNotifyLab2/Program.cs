@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Components.Web;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+// 註冊 HttpClient 工廠使可注入：IHttpClientFactory 以建構較低秏的 HttpClient 資源池。
+builder.Services.AddHttpClient();
+
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
