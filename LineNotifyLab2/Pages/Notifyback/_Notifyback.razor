@@ -1,0 +1,30 @@
+﻿@* GET /notifyback?code=evTbViQRQfV0tJLqscBJRP&state=abcdefghijklmnopqrstuvwxyz *@
+@page "/notifyback"
+@inject NavigationManager navSvc
+
+<PageTitle>LINE Notify callback</PageTitle>
+
+<h1>LINE Notify callback</h1>
+
+<h6>Query Parameters</h6>
+<ul>
+  <li>code: @QueryCode</li>
+  <li>state: @QueryState</li>
+</ul>
+
+
+
+@code {
+  [Parameter]
+  [SupplyParameterFromQuery(Name = "code")]
+  public string QueryCode { get; set; } = string.Empty;
+
+  [Parameter]
+  [SupplyParameterFromQuery(Name = "state")]
+  public string QueryState { get; set; } = string.Empty;
+
+  protected override void OnInitialized()
+  {
+
+  }
+}
