@@ -6,6 +6,11 @@
 <PageTitle>LINE Notify 管理</PageTitle>
 
 <h1>LINE Notify 管理</h1>
+<p>
+  前置工作<br />
+  1. 申請航港局的“LINE法人帳號”。<br />
+  2. 用此帳號建立群組並把 @@linenotify 加入群組。預計有七個通知群組。
+</p>
 
 <EditForm Model=formData OnValidSubmit=HandleSubmit>
   <DataAnnotationsValidator />
@@ -36,19 +41,27 @@
     <p class="form-control-static">@formData.AccessToken &nbsp;</p>
   </div>
 
-  <button class="btn btn-primary" type="submit">儲存聊天室設定</button>
+  <div class="d-flex gap-2 my-3">
+    <button class="btn btn-primary" type="submit">儲存聊天室設定</button>
+    <button class="btn btn-outline-primary" @onclick=HandleNotifyAuth>LINE Notify 授權</button>
+    <button class="btn btn-outline-primary" @onclick=HandleStatus>檢查 AccessToken 狀態</button>
+    <button class="btn btn-outline-primary" @onclick=HandleRevoke>廢止 AccessToken</button>
+  </div>
 </EditForm>
 
-<br />
-
-<button class="btn btn-primary" @onclick=HandleNotifyAuth>LINE Notify 授權</button>
-
-<button class="btn btn-secondary" @onclick=HandleSimsAuth>模擬認證成功</button>
+<button class="btn btn-secondary" @onclick=HandleSimsAuth>模擬認證轉址</button>
 
 @if (f_loading)
 {
   <div class="progress my-3">
     <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+  </div>
+}
+
+@if (message != null)
+{
+  <div class="alert alert-info my-3" role="alert">
+    @message
   </div>
 }
 
@@ -64,13 +77,18 @@
   LineNotifyData formData = new LineNotifyData();
   string? errMsg = null;
   bool f_loading = false;
+  string? message = null;
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
+      f_loading = true;
+      StateHasChanged();
+
       var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
       formData = result.Success ? result.Value! : new LineNotifyData();
+      f_loading = false;
       StateHasChanged();
     }
   }
@@ -89,6 +107,7 @@
     try
     {
       errMsg = null;
+      message = null;
       f_loading = true;
 
       using var _http = httpFactory.CreateClient();
@@ -123,5 +142,59 @@
   {
     // 模擬認證成功
     navSvc.NavigateTo("/notifyback?code=1234567890123456789012&state=5ris6KmmIE5vdGlmeSDnvqTntYQ=");
+  }
+
+  async Task HandleStatus()
+  {
+    try
+    {
+      errMsg = null;
+      message = null;
+      f_loading = true;
+
+      using var _http = httpFactory.CreateClient();
+      _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {formData.AccessToken}");
+      _http.BaseAddress = new Uri($"https://notify-api.line.me");
+
+      using var resp = await _http.GetAsync("api/status");
+      var result = await resp.Content.ReadFromJsonAsync<LineNotifyStatusResponse>();
+
+      message = $"AccessToken 狀態：{JsonSerializer.Serialize(result, jsonOptions)}";
+    }
+    catch (Exception ex)
+    {
+      errMsg = "出現例外！" + ex.Message;
+    }
+    finally
+    {
+      f_loading = false;
+    }
+  }
+
+  async Task HandleRevoke()
+  {
+    try
+    {
+      errMsg = null;
+      message = null;
+      f_loading = true;
+
+      using var _http = httpFactory.CreateClient();
+      _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {formData.AccessToken}");
+      _http.BaseAddress = new Uri($"https://notify-api.line.me");
+
+      using var resp = await _http.PostAsync("api/revoke", new StringContent(string.Empty));
+      var result = await resp.Content.ReadFromJsonAsync<LineNotifyResponse>();
+
+      message = $"AccessToken 廢止：{JsonSerializer.Serialize(result, jsonOptions)}";
+    }
+    catch (Exception ex)
+    {
+      errMsg = "出現例外！" + ex.Message;
+    }
+    finally
+    {
+      f_loading = false;
+    }
   }
 }

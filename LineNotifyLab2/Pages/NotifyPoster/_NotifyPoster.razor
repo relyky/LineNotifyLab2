@@ -30,23 +30,32 @@
     <InputNumber @bind-Value=formData.StickerId class="form-control" />
   </div>
 
-  <button class="btn btn-primary" type="submit">送出</button>
+  <button class="btn btn-primary" type="submit">送出 LINE Notify</button>
 </EditForm>
 
-<button class="btn btn-secondary">檢查 AccessToken 狀態 (未實作)</button>
-<button class="btn btn-secondary">廢止 AccessToken (未實作)</button>
+<div class="d-flex gap-2 my-3">
+  <button class="btn btn-secondary" @onclick=HandleStatus >檢查 AccessToken 狀態</button>
+  <button class="btn btn-secondary" @onclick=HandleRevoke>廢止 AccessToken</button>
+</div>
 
-@if(f_loading)
+@if (f_loading)
 {
   <div class="progress my-3">
     <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
   </div>
 }
 
-@if(errMsg != null)
+@if (errMsg != null)
 {
   <div class="alert alert-danger my-3" role="alert">
     @errMsg
+  </div>
+}
+
+@if (message != null)
+{
+  <div class="alert alert-info my-3" role="alert">
+    @message
   </div>
 }
 
@@ -63,13 +72,18 @@
   PostModel formData = new();
   string? errMsg = null;
   bool f_loading = false;
+  string? message = null;
 
   protected override async Task OnAfterRenderAsync(bool firstRender)
   {
     if (firstRender)
     {
+      f_loading = true;
+      StateHasChanged();
+
       var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
       notifySetting = result.Success ? result.Value! : new LineNotifyData();
+      f_loading = false;
       StateHasChanged();
     }
   }
@@ -81,6 +95,7 @@
     try
     {
       errMsg = null;
+      message = null;
       f_loading = true;
 
       using var _http = httpFactory.CreateClient();
@@ -95,10 +110,10 @@
       List<string> queryItems = new List<string>();
       queryItems.Add($"message={formData.Message}");
 
-      if (formData.StickerPackageId > 0) 
+      if (formData.StickerPackageId > 0)
         queryItems.Add($"stickerPackageId={formData.StickerPackageId}");
 
-      if(formData.StickerId > 0)
+      if (formData.StickerId > 0)
         queryItems.Add($"stickerId={formData.StickerId}");
 
       notifyUri.Query = String.Join("&", queryItems);
@@ -108,7 +123,7 @@
       var json = await resp.Content.ReadAsStringAsync();
       var result = JsonSerializer.Deserialize<LineNotifyResponse>(json);
 
-      if(result!.status != 200)
+      if (result!.status != 200)
         errMsg = $"發送 LINE Notify 失敗！{JsonSerializer.Serialize(result, jsonOptions)}";
     }
     catch (Exception ex)
@@ -121,10 +136,65 @@
     }
   }
 
+  async Task HandleStatus()
+  {
+    try
+    {
+      errMsg = null;
+      message = null;
+      f_loading = true;
+
+      using var _http = httpFactory.CreateClient();
+      _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {notifySetting!.AccessToken}");
+      _http.BaseAddress = new Uri($"https://notify-api.line.me");
+
+      using var resp = await _http.GetAsync("api/status");
+      var result = await resp.Content.ReadFromJsonAsync<LineNotifyStatusResponse>();
+
+      message = $"AccessToken 狀態：{JsonSerializer.Serialize(result, jsonOptions)}";
+    }
+    catch (Exception ex)
+    {
+      errMsg = "出現例外！" + ex.Message;
+    }
+    finally
+    {
+      f_loading = false;
+    }
+  }
+
+  async Task HandleRevoke()
+  {
+    try
+    {
+      errMsg = null;
+      message = null;
+      f_loading = true;
+
+      using var _http = httpFactory.CreateClient();
+      _http.DefaultRequestHeaders.Add("Authorization", $"Bearer {notifySetting!.AccessToken}");
+      _http.BaseAddress = new Uri($"https://notify-api.line.me");
+
+      using var resp = await _http.PostAsync("api/revoke", new StringContent(string.Empty));
+      var result = await resp.Content.ReadFromJsonAsync<LineNotifyResponse>();
+
+      message = $"AccessToken 廢止：{JsonSerializer.Serialize(result, jsonOptions)}";
+    }
+    catch (Exception ex)
+    {
+      errMsg = "出現例外！" + ex.Message;
+    }
+    finally
+    {
+      f_loading = false;
+    }
+  }
+
+
   public class PostModel
   {
     public string Message { get; set; } = "今天天氣真好。";
     public int StickerPackageId { get; set; } = 1;
-    public int StickerId { get; set; } = 1;
+    public int StickerId { get; set; } = 4;
   }
 }

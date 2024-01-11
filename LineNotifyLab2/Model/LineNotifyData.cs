@@ -34,3 +34,5 @@ public record LineNotifyData
 public record LineNotifyResponse(int status, string message);
 
 public record LineNotifyTokenResponse(int status, string message, string access_token);
+
+public record LineNotifyStatusResponse(int status, string message, string targetType, string target);
