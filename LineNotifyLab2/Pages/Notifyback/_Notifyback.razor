@@ -1,5 +1,6 @@
 ﻿@* GET /notifyback?code=evTbViQRQfV0tJLqscBJRP&state=abcdefghijklmnopqrstuvwxyz *@
 @page "/notifyback"
+@inject IHttpClientFactory httpFactory
 @inject NavigationManager navSvc
 
 <PageTitle>LINE Notify callback</PageTitle>
@@ -12,7 +13,28 @@
   <li>state: @QueryState</li>
 </ul>
 
+<button class="btn btn-primary" @onclick=HandleNotifyToken>取得 LINE Notify access token</button>
 
+@if (f_loading)
+{
+  <div class="progress my-3">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+  </div>
+}
+
+@if (errMsg != null)
+{
+  <div class="alert alert-danger my-3" role="alert">
+    @errMsg
+  </div>
+}
+
+@if(tokenResult != null)
+{
+  <div class="alert alert-info my-3" role="alert">
+    @JsonSerializer.Serialize(tokenResult, jsonOptions)
+  </div>
+}
 
 @code {
   [Parameter]
@@ -23,8 +45,70 @@
   [SupplyParameterFromQuery(Name = "state")]
   public string QueryState { get; set; } = string.Empty;
 
+  //## Resource
+  System.Text.Json.JsonSerializerOptions jsonOptions = new System.Text.Json.JsonSerializerOptions
+    {
+      WriteIndented = true,
+      Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+  //## State
+  string? errMsg = null;
+  bool f_loading = false;
+  LineNotifyTokenResponse? tokenResult = null;
+
   protected override void OnInitialized()
   {
 
+  }
+
+  async Task HandleNotifyToken()
+  {
+    // curl -d "grant_type=authorization_code&redirect_uri=https://d237-211-72-195-28.ngrok-free.app&client_id=wpO642hWhtyWEi6OSIOwJY&client_secret=eX6DoCyvESUmFFKJvIPrS0oDAvvqXIRnBEyXgka6zeO&code=Ia80TDvpbvukJqQkSjRGco" https://notify-bot.line.me/oauth/token
+    // {
+    //   "status" : 200,
+    //   "message" : "access_token is issued",
+    //   "access_token" : "tzioDv8RXCo1LZ1qj08WPjeCjmWoRLPYK2wyOFp8GJG"
+    // }
+
+    try
+    {
+      errMsg = null;
+      f_loading = true;
+      tokenResult = null;
+
+      // 需事先存好
+      const string ClientID = @"wpO642hWhtyWEi6OSIOwJY";
+      const string ClientCecret = @"eX6DoCyvESUmFFKJvIPrS0oDAvvqXIRnBEyXgka6zeO";
+      const string RedirectUri = @"https://d237-211-72-195-28.ngrok-free.app";
+
+      using var _http = httpFactory.CreateClient();
+      _http.BaseAddress = new Uri($"https://notify-api.line.me");
+
+      //# 組織 notify uri.
+      var tokenUri = new UriBuilder(_http.BaseAddress);
+      tokenUri.Path = "oauth/token";
+
+      // uri-query
+      List<string> queryItems = new List<string>();
+      queryItems.Add($"grant_type=authorization_code");
+      queryItems.Add($"client_id={ClientID}");
+      queryItems.Add($"client_secret={ClientCecret}");
+      queryItems.Add($"redirect_uri={RedirectUri}");
+      queryItems.Add($"code={QueryCode}");
+      tokenUri.Query = String.Join("&", queryItems);
+
+      using var resp = await _http.PostAsync(tokenUri.Uri, new StringContent(string.Empty));
+      var json = await resp.Content.ReadAsStringAsync();
+      tokenResult = JsonSerializer.Deserialize<LineNotifyTokenResponse>(json);
+    }
+    catch (Exception ex)
+    {
+      errMsg = "發送 LINE Notify 出現例外！" + ex.Message;
+    }
+    finally
+    {
+      f_loading = false;
+    }
   }
 }

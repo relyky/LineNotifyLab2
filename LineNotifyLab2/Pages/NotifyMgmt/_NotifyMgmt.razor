@@ -1,9 +1,24 @@
 ﻿@page "/notify-mgmt"
+@inject IHttpClientFactory httpFactory
+@inject NavigationManager navSvc
 
 <PageTitle>LINE Notify 管理</PageTitle>
 
 <h1>LINE Notify 管理</h1>
 
-@code {
 
+<button class="btn btn-secondary" @onclick=HandleSimsAuthN>模擬認證成功</button>
+
+@code {
+  //## Resource
+  System.Text.Json.JsonSerializerOptions jsonOptions = new System.Text.Json.JsonSerializerOptions
+    {
+      WriteIndented = true,
+      Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+  void HandleSimsAuthN()
+  {
+    navSvc.NavigateTo("/notifyback?code=1234567890123456789012&state=12345678-1234-1234-1234-123456789012");
+  }
 }

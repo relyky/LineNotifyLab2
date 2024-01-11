@@ -29,6 +29,13 @@
   <button class="btn btn-primary" type="submit">送出</button>
 </EditForm>
 
+@if(f_loading)
+{
+  <div class="progress my-3">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
+  </div>
+}
+
 @if(errMsg != null)
 {
   <div class="alert alert-danger my-3" role="alert">
@@ -84,7 +91,7 @@
       notifyUri.Query = String.Join("&", queryItems);
 
       using var resp = await _http.PostAsync(notifyUri.Uri, new StringContent(string.Empty));
-      
+
       var json = await resp.Content.ReadAsStringAsync();
       var result = JsonSerializer.Deserialize<LineNotifyResponse>(json);
 
@@ -95,6 +102,10 @@
     {
       errMsg = "發送 LINE Notify 出現例外！" + ex.Message;
     }
+    finally
+    {
+      f_loading = false;
+    }
   }
 
   public class PostModel
@@ -103,6 +114,4 @@
     public int StickerPackageId { get; set; } = 1;
     public int StickerId { get; set; } = 1;
   }
-
-  public record LineNotifyResponse(int status, string message);
 }
