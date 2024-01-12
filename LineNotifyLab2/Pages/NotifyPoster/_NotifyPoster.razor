@@ -1,7 +1,8 @@
 ﻿@page "/notify-poster"
 @inject IHttpClientFactory httpFactory
 @inject NavigationManager navSvc
-@inject ProtectedLocalStorage localStore
+@* @inject ProtectedLocalStorage localStore *@
+@inject LineNotifyRepoService notifyRepo
 
 <PageTitle>LINE Notify 訊息發送</PageTitle>
 
@@ -81,8 +82,10 @@
       f_loading = true;
       StateHasChanged();
 
-      var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
-      notifySetting = result.Success ? result.Value! : new LineNotifyData();
+      //var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
+      //notifySetting = result.Success ? result.Value! : new LineNotifyData();
+      var result = await notifyRepo.GetAsync();
+      notifySetting = result ?? new LineNotifyData();
       f_loading = false;
       StateHasChanged();
     }

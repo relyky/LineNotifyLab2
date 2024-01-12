@@ -2,7 +2,8 @@
 @page "/notifyback"
 @inject IHttpClientFactory httpFactory
 @inject NavigationManager navSvc
-@inject ProtectedLocalStorage localStore
+@* @inject ProtectedLocalStorage localStore *@
+@inject LineNotifyRepoService notifyRepo
 
 <PageTitle>LINE Notify callback</PageTitle>
 
@@ -68,8 +69,10 @@
   {
     if (firstRender)
     {
-      var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
-      notifySetting = result.Success ? result.Value! : new LineNotifyData();
+      //var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
+      //notifySetting = result.Success ? result.Value! : new LineNotifyData();
+      var result = await notifyRepo.GetAsync();
+      notifySetting = result ?? new LineNotifyData();
       StateHasChanged();
 
       await HandleNotifyToken();
@@ -116,7 +119,8 @@
       {
         // 儲存 AccessToken
         notifySetting!.AccessToken = tokenResult.access_token;
-        await localStore.SetAsync(nameof(LineNotifyData), notifySetting);
+        //await localStore.SetAsync(nameof(LineNotifyData), notifySetting);
+        await notifyRepo.SetAsync(notifySetting);
       }
     }
     catch (Exception ex)

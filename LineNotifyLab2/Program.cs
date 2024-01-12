@@ -11,6 +11,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
+builder.Services.AddSingleton<LineNotifyRepoService>();
 
 var app = builder.Build();
 

@@ -1,7 +1,8 @@
 ﻿@page "/notify-mgmt"
 @inject IHttpClientFactory httpFactory
 @inject NavigationManager navSvc
-@inject ProtectedLocalStorage localStore
+@* @inject ProtectedLocalStorage localStore *@
+@inject LineNotifyRepoService notifyRepo
 
 <PageTitle>LINE Notify 管理</PageTitle>
 
@@ -86,8 +87,10 @@
       f_loading = true;
       StateHasChanged();
 
-      var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
-      formData = result.Success ? result.Value! : new LineNotifyData();
+      //var result = await localStore.GetAsync<LineNotifyData>(nameof(LineNotifyData));
+      //formData = result.Success ? result.Value! : new LineNotifyData();
+      var result = await notifyRepo.GetAsync();
+      formData = result ?? new LineNotifyData();
       f_loading = false;
       StateHasChanged();
     }
@@ -95,7 +98,8 @@
 
   async Task HandleSubmit(EditContext ctx)
   {
-    await localStore.SetAsync(nameof(LineNotifyData), formData);
+    //await localStore.SetAsync(nameof(LineNotifyData), formData);
+    await notifyRepo.SetAsync(formData);
   }
 
   void HandleNotifyAuth()
