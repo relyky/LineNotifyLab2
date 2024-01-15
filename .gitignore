@@ -396,3 +396,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+/LineNotifyLab2/Database.sqlite-wal
+/LineNotifyLab2/Database.sqlite-shm
+/LineNotifyLab2/Database.sqlite
