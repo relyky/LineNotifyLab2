@@ -12,6 +12,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddSingleton<LineNotifyRepoService>();
+builder.Services.AddScoped<SQLiteLabService>();
 
 var app = builder.Build();
 

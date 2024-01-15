@@ -1,0 +1,76 @@
+﻿@page "/sqlite-lab"
+@inject SQLiteLabService bizSvc
+
+<h3>_SQLiteLab</h3>
+
+<div class="d-flex gap-2">
+  <button @onclick=HandleInit>Create table when not exists</button>
+
+  <button @onclick=HandleQuery>List data list of the table</button>
+
+  <button @onclick=HandleInsert>Insert one row</button>
+
+  <button @onclick=HandleDelete>Delete first row</button>
+
+  <button @onclick=HandleUpdate>Update all rows</button>
+
+</div>
+
+@if (dataList != null)
+{
+  <h6>dataList</h6>
+  <pre>@JsonSerializer.Serialize(dataList, jsonOptions)</pre>
+}
+
+@if (message != null)
+{
+  <div class="alert alert-info" role="alert">
+    @message
+  </div>
+}
+
+@code {
+  //## Resource
+  System.Text.Json.JsonSerializerOptions jsonOptions = new System.Text.Json.JsonSerializerOptions
+    {
+      WriteIndented = true,
+      Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+  string? message = null;
+  List<Player>? dataList = null;
+
+  async Task HandleInit()
+  {
+    message = null;
+    int ret = await Task.Run(() => bizSvc.CreateTableWhenNotExists());
+    message = $"ret: {ret}";
+  }
+
+  async Task HandleQuery()
+  {
+    message = null;
+    dataList = await Task.Run(() => bizSvc.QueryDataList());
+  }
+
+  async Task HandleInsert()
+  {
+    message = null;
+    Player newItem = await Task.Run(() => bizSvc.InsertData());
+    message = @JsonSerializer.Serialize(newItem, jsonOptions);
+  }
+
+  async Task HandleDelete()
+  {
+    message = null;
+    int ret = await Task.Run(() => bizSvc.DeleteFirstRow());
+    message = $"ret: {ret}";
+  }
+
+  async Task HandleUpdate()
+  {
+    message = null;
+    int ret = await Task.Run(() => bizSvc.UpdateAllRows());
+    message = $"ret: {ret}";
+  }
+}
